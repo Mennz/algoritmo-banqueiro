@@ -1,10 +1,14 @@
-import os
-
-# Define the content of the README.md
-readme_content = """# Algoritmo do Banqueiro - Trabalho Prático 1
+Algoritmo do Banqueiro - Trabalho Prático 1
 
 ## Descrição
-Este projeto consiste em uma implementação multithreaded do **Algoritmo do Banqueiro**, desenvolvida para a disciplina de Sistemas Operacionais. O objetivo é simular um sistema que gerencia a alocação de recursos entre múltiplos clientes, garantindo que o sistema permaneça sempre em um **Estado Seguro** e evitando a ocorrência de deadlocks.
+Nesse trabalho prático, você deverá escrever um programa multithreaded que implemente o
+algoritmo do banqueiro discutido na Seção 7.5.3 do livro
+1
+. Vários clientes solicitam e liberam
+recursos do banco. O banqueiro atenderá uma solicitação somente se ela deixar o sistema em
+um estado seguro. Uma solicitação que deixe o sistema em um estado inseguro será negada.
+Essa tarefa de programação combina três tópicos diferentes: (1) criar múltiplos threads, (2)
+prevenir condições de corrida e (3) evitar deadlocks
 
 O programa utiliza:
 - **Threads**: Cada cliente é representado por uma thread independente.
@@ -20,6 +24,3 @@ Para compilar e executar este projeto, você precisa ter o [.NET SDK](https://do
 
 ## Como Compilar
 Navegue até a pasta do projeto no terminal e execute o comando abaixo para restaurar as dependências e compilar o executável:
-
-```bash
-dotnet build
