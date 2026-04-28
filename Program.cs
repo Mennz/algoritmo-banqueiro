@@ -3,42 +3,42 @@ using System.Threading;
 
 class Program
 {
-    const int NUMBER_OF_CUSTOMERS = 5;
-    const int NUMBER_OF_RESOURCES = 3;
+    const int NUMERO_DE_CLIENTES  = 5;
+    const int NUMERO_DE_RECURSOS  = 3;
 
-    static int[] available = new int[NUMBER_OF_RESOURCES];
-    static int[,] maximum = new int[NUMBER_OF_CUSTOMERS, NUMBER_OF_RESOURCES];
-    static int[,] allocation = new int[NUMBER_OF_CUSTOMERS, NUMBER_OF_RESOURCES];
-    static int[,] need = new int[NUMBER_OF_CUSTOMERS, NUMBER_OF_RESOURCES];
+    static int[]   disponivel  = new int[NUMERO_DE_RECURSOS];
+    static int[,]  maximo      = new int[NUMERO_DE_CLIENTES, NUMERO_DE_RECURSOS];
+    static int[,]  alocacao    = new int[NUMERO_DE_CLIENTES, NUMERO_DE_RECURSOS];
+    static int[,]  necessidade = new int[NUMERO_DE_CLIENTES, NUMERO_DE_RECURSOS];
 
-    static readonly object lockObj = new object();
-    static Random rand = new Random();
+    static readonly object travarObj = new object();
+    static Random aleatorio = new Random();
 
     static void Main(string[] args)
     {
-        if (args.Length < NUMBER_OF_RESOURCES)
+        if (args.Length < NUMERO_DE_RECURSOS)
         {
             Console.WriteLine("Uso: dotnet run <r1> <r2> <r3>");
             return;
         }
 
-        for (int i = 0; i < NUMBER_OF_RESOURCES; i++)
-            available[i] = int.Parse(args[i]);
+        for (int i = 0; i < NUMERO_DE_RECURSOS; i++)
+            disponivel[i] = int.Parse(args[i]);
 
-        for (int i = 0; i < NUMBER_OF_CUSTOMERS; i++)
+        for (int i = 0; i < NUMERO_DE_CLIENTES; i++)
         {
-            for (int j = 0; j < NUMBER_OF_RESOURCES; j++)
+            for (int j = 0; j < NUMERO_DE_RECURSOS; j++)
             {
-                maximum[i, j] = rand.Next(1, available[j] + 1);
-                need[i, j] = maximum[i, j];
+                maximo[i, j]      = aleatorio.Next(1, disponivel[j] + 1);
+                necessidade[i, j] = maximo[i, j];
             }
         }
 
-        Thread[] threads = new Thread[NUMBER_OF_CUSTOMERS];
-        for (int i = 0; i < NUMBER_OF_CUSTOMERS; i++)
+        Thread[] threads = new Thread[NUMERO_DE_CLIENTES];
+        for (int i = 0; i < NUMERO_DE_CLIENTES; i++)
         {
-            int customerId = i;
-            threads[i] = new Thread(() => CustomerRoutine(customerId));
+            int idCliente = i;
+            threads[i] = new Thread(() => RotinaDoCliente(idCliente));
             threads[i].Start();
         }
 
@@ -46,128 +46,128 @@ class Program
             t.Join();
     }
 
-    static void CustomerRoutine(int customerId)
+    static void RotinaDoCliente(int idCliente)
     {
         while (true)
         {
-            Thread.Sleep(rand.Next(500, 1500));
-            
-            int[] request = new int[NUMBER_OF_RESOURCES];
-            bool wantsResources = false;
-            
-            for (int i = 0; i < NUMBER_OF_RESOURCES; i++)
+            Thread.Sleep(aleatorio.Next(500, 1500));
+
+            int[] pedido       = new int[NUMERO_DE_RECURSOS];
+            bool  querRecursos = false;
+
+            for (int i = 0; i < NUMERO_DE_RECURSOS; i++)
             {
-                request[i] = rand.Next(0, need[customerId, i] + 1);
-                if (request[i] > 0) wantsResources = true;
+                pedido[i] = aleatorio.Next(0, necessidade[idCliente, i] + 1);
+                if (pedido[i] > 0) querRecursos = true;
             }
 
-            if (wantsResources)
+            if (querRecursos)
             {
-                if (RequestResources(customerId, request))
+                if (RequisitarRecursos(idCliente, pedido))
                 {
-                    Thread.Sleep(rand.Next(500, 1500));
-                    int[] release = new int[NUMBER_OF_RESOURCES];
-                    for (int i = 0; i < NUMBER_OF_RESOURCES; i++)
-                    {
-                        release[i] = rand.Next(0, allocation[customerId, i] + 1);
-                    }
-                    ReleaseResources(customerId, release);
+                    Thread.Sleep(aleatorio.Next(500, 1500));
+
+                    int[] liberacao = new int[NUMERO_DE_RECURSOS];
+                    for (int i = 0; i < NUMERO_DE_RECURSOS; i++)
+                        liberacao[i] = aleatorio.Next(0, alocacao[idCliente, i] + 1);
+
+                    LiberarRecursos(idCliente, liberacao);
                 }
             }
         }
     }
 
-    static bool RequestResources(int customerId, int[] request)
+    static bool RequisitarRecursos(int idCliente, int[] pedido)
     {
-        lock (lockObj)
+        lock (travarObj)
         {
-            for (int i = 0; i < NUMBER_OF_RESOURCES; i++)
+            for (int i = 0; i < NUMERO_DE_RECURSOS; i++)
             {
-                if (request[i] > need[customerId, i] || request[i] > available[i])
+                if (pedido[i] > necessidade[idCliente, i] || pedido[i] > disponivel[i])
                     return false;
             }
 
-            for (int i = 0; i < NUMBER_OF_RESOURCES; i++)
+            // Simula a alocação para verificar segurança
+            for (int i = 0; i < NUMERO_DE_RECURSOS; i++)
             {
-                available[i] -= request[i];
-                allocation[customerId, i] += request[i];
-                need[customerId, i] -= request[i];
+                disponivel[i]       -= pedido[i];
+                alocacao[idCliente, i]    += pedido[i];
+                necessidade[idCliente, i] -= pedido[i];
             }
 
-            if (IsSafe())
+            if (EstadoSeguro())
             {
-                Console.WriteLine($"Cliente {customerId} pegou: [{string.Join(",", request)}]");
+                Console.WriteLine($"Cliente {idCliente} pegou: [{string.Join(",", pedido)}]");
                 return true;
             }
             else
             {
-                for (int i = 0; i < NUMBER_OF_RESOURCES; i++)
+                // Desfaz a simulação — estado seria inseguro
+                for (int i = 0; i < NUMERO_DE_RECURSOS; i++)
                 {
-                    available[i] += request[i];
-                    allocation[customerId, i] -= request[i];
-                    need[customerId, i] += request[i];
+                    disponivel[i]       += pedido[i];
+                    alocacao[idCliente, i]    -= pedido[i];
+                    necessidade[idCliente, i] += pedido[i];
                 }
-                Console.WriteLine($"Cliente {customerId} negado: [{string.Join(",", request)}]");
+                Console.WriteLine($"Cliente {idCliente} negado: [{string.Join(",", pedido)}]");
                 return false;
             }
         }
     }
 
-    static void ReleaseResources(int customerId, int[] release)
+    static void LiberarRecursos(int idCliente, int[] liberacao)
     {
-        lock (lockObj)
+        lock (travarObj)
         {
-            for (int i = 0; i < NUMBER_OF_RESOURCES; i++)
+            for (int i = 0; i < NUMERO_DE_RECURSOS; i++)
             {
-                available[i] += release[i];
-                allocation[customerId, i] -= release[i];
-                need[customerId, i] += release[i];
+                disponivel[i]       += liberacao[i];
+                alocacao[idCliente, i]    -= liberacao[i];
+                necessidade[idCliente, i] += liberacao[i];
             }
-            Console.WriteLine($"Cliente {customerId} liberou: [{string.Join(",", release)}]");
+            Console.WriteLine($"Cliente {idCliente} liberou: [{string.Join(",", liberacao)}]");
         }
     }
 
-    static bool IsSafe()
+    static bool EstadoSeguro()
     {
-        int[] work = new int[NUMBER_OF_RESOURCES];
-        Array.Copy(available, work, NUMBER_OF_RESOURCES);
-        
-        bool[] finish = new bool[NUMBER_OF_CUSTOMERS];
-        bool found;
-        
+        int[] trabalho = new int[NUMERO_DE_RECURSOS];
+        Array.Copy(disponivel, trabalho, NUMERO_DE_RECURSOS);
+
+        bool[] concluido = new bool[NUMERO_DE_CLIENTES];
+        bool   encontrou;
+
         do
         {
-            found = false;
-            for (int i = 0; i < NUMBER_OF_CUSTOMERS; i++)
+            encontrou = false;
+            for (int i = 0; i < NUMERO_DE_CLIENTES; i++)
             {
-                if (!finish[i])
+                if (!concluido[i])
                 {
-                    bool canFinish = true;
-                    for (int j = 0; j < NUMBER_OF_RESOURCES; j++)
+                    bool podeTerminar = true;
+                    for (int j = 0; j < NUMERO_DE_RECURSOS; j++)
                     {
-                        if (need[i, j] > work[j])
+                        if (necessidade[i, j] > trabalho[j])
                         {
-                            canFinish = false;
+                            podeTerminar = false;
                             break;
                         }
                     }
 
-                    if (canFinish)
+                    if (podeTerminar)
                     {
-                        for (int j = 0; j < NUMBER_OF_RESOURCES; j++)
-                            work[j] += allocation[i, j];
-                        
-                        finish[i] = true;
-                        found = true;
+                        for (int j = 0; j < NUMERO_DE_RECURSOS; j++)
+                            trabalho[j] += alocacao[i, j];
+
+                        concluido[i] = true;
+                        encontrou    = true;
                     }
                 }
             }
-        } while (found);
+        } while (encontrou);
 
-        for (int i = 0; i < NUMBER_OF_CUSTOMERS; i++)
-        {
-            if (!finish[i]) return false;
-        }
+        for (int i = 0; i < NUMERO_DE_CLIENTES; i++)
+            if (!concluido[i]) return false;
 
         return true;
     }
